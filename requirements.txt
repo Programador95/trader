@@ -1,0 +1,34 @@
+# Versoes travadas em 2026-09-28 (LEDGER E003), testadas com Python 3.14.3.
+# Travar garante que o mesmo backtest de o mesmo numero em qualquer reinstalacao.
+# Atualizar ou incluir pacote e decisao do Alison: instalar no .venv, rodar os
+# testes, regravar aqui a saida de `pip freeze` e registrar o motivo no LEDGER.
+
+# Usados diretamente pelo projeto
+pandas==3.0.6
+numpy==2.5.3
+pyarrow==25.0.1
+requests==2.34.2
+PyYAML==6.0.3
+matplotlib==3.11.2
+pytest==9.1.1
+python-dotenv==1.2.3
+tzdata==2026.4
+
+# Dependencias dos pacotes acima
+certifi==2026.7.22
+charset-normalizer==3.5.1
+colorama==0.4.6
+contourpy==1.4.0
+cycler==0.12.1
+fonttools==4.66.0
+idna==3.20
+iniconfig==2.3.0
+kiwisolver==1.5.1
+packaging==26.3
+pillow==12.3.0
+pluggy==1.6.0
+Pygments==2.21.0
+pyparsing==3.3.3
+python-dateutil==2.9.0.post0
+six==1.17.0
+urllib3==2.8.0

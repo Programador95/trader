@@ -1,0 +1,131 @@
+# Projeto MESA - regras da mesa e parametros do projeto.
+# Fonte unica: o codigo le daqui. Nenhum numero da mesa fica fixo no codigo.
+# Regras verificadas na documentacao oficial em 2026-09-27. Reconferir antes de gastar.
+
+plataforma:
+  nome: MyFundedPerps
+  docs: https://docs.myfundedperpetuals.com/
+  host_sandbox: https://sandbox.myfundedperpetuals.com
+  host_real: https://developers.myfundedperpetuals.com
+  verificado_em: "2026-09-27"
+
+conta:
+  plano: "1-Step Select"
+  saldo_inicial: 10000
+  preco_usd: 40              # promocao de 32 com o codigo PERPS ate ~2026-09-30
+  meta_pct: 0.09             # sobre o saldo inicial, medida na equity (inclui P&L aberto)
+  dd_estatico_pct: 0.03      # piso = saldo_inicial * (1 - dd_estatico_pct) = 9700
+  perda_diaria_pct: 0.03     # do saldo inicial, a partir da equity de inicio do dia
+  fuso_reset: "America/New_York"   # reset a meia-noite de NY (segue horario de verao)
+  prazo_dias: null           # sem prazo para passar
+  dias_minimos: 0
+  consistencia: null         # sem regra de consistencia
+  inatividade_dias_avaliacao: 30   # falha sem trade EXECUTADO em 30 dias corridos (verificado 2026-09-28)
+  inatividade_dias_financiada: 7   # financiada encerrada apos 7 dias corridos sem trade executado
+  preco_equity: "mark"       # equity = saldo + P&L aberto avaliado pelo mark (glossario oficial)
+  monitoramento_limites: "continuo"   # piso e perda diaria checados o tempo todo, nao no fim do dia
+  tocar_limite_quebra: true  # atingir o piso ou o limite diario ja quebra; apos a trava, equity igual ao piso e permitida
+
+custos:
+  comissao_por_execucao:     # fracao do notional, cobrada na entrada e na saida
+    cripto: 0.0003
+    acoes_indices_commodities: 0.00005
+    forex: 0.000025
+  swap_diario:               # fracao do notional por dia, cobrada de hora em hora (1/24 por hora)
+    cripto: 0.0003
+    acoes_indices_commodities: 0.00015
+    forex: 0.00005
+  slippage_max_bps:          # teto adverso por ordem a mercado; no backtest, usar o teto (pessimista)
+    indices_commodities: {ate_100k: 0.25, ate_200k: 0.5, ate_1m: 0.75, acima_1m: 1.0}
+    forex: {ate_100k: 0.05, ate_200k: 0.08, ate_1m: 0.12, acima_1m: 0.15}
+    outros_por_open_interest:   # colunas: notional ate 100k / ate 500k / acima de 500k
+      acima_500m: [0.8, 1.2, 2.0]
+      de_100m_a_500m: [1.2, 1.8, 3.0]
+      de_25m_a_100m: [2.0, 3.0, 5.0]
+      de_10m_a_25m: [3.5, 6.0, 9.0]
+      abaixo_10m: [6.0, 10.0, 16.0]
+  mercados:                  # classe de custo, tabela de slippage e casas decimais do tamanho (GET /v1/markets)
+    # faixa de OI conservadora (a menor provavel); confirmar pela API da plataforma na F4
+    BTCUSDT: {classe: cripto, faixa_oi: acima_500m, casas: 3}
+    ETHUSDT: {classe: cripto, faixa_oi: acima_500m, casas: 3}
+    SOLUSDT: {classe: cripto, faixa_oi: de_100m_a_500m, casas: 2}
+    XRPUSDT: {classe: cripto, faixa_oi: de_100m_a_500m, casas: 1}
+    BNBUSDT: {classe: cripto, faixa_oi: de_100m_a_500m, casas: 2}
+    DOGEUSDT: {classe: cripto, faixa_oi: de_100m_a_500m, casas: 0}
+    USATECHIDXUSD: {classe: acoes_indices_commodities, tabela: indices_commodities, casas: 4}   # proxy do xyz:XYZ100
+    USA500IDXUSD: {classe: acoes_indices_commodities, tabela: indices_commodities, casas: 3}    # proxy do xyz:SP500
+    # H10 (2026-09-29): classes pelas taxas publicadas (commodities com indices; EUR e JPY como forex)
+    XAUUSD: {classe: acoes_indices_commodities, tabela: indices_commodities, casas: 4}          # proxy do xyz:GOLD
+    XAGUSD: {classe: acoes_indices_commodities, tabela: indices_commodities, casas: 2}          # proxy do xyz:SILVER
+    BRENTCMDUSD: {classe: acoes_indices_commodities, tabela: indices_commodities, casas: 2}     # proxy do xyz:BRENTOIL
+    EURUSD: {classe: forex, tabela: forex, casas: 1}                                            # proxy do xyz:EUR
+    USDJPY: {classe: forex, tabela: forex, casas: 2}                                            # proxy do xyz:JPY
+
+execucao:
+  ordem_mercado: "compra = min(melhor ask, mark*(1+teto)) e nunca abaixo do mark; venda simetrica"
+  ordem_limitada: "executa inteira no preco limite apos 2 checagens seguidas do book; nunca parcial"
+  gatilho_stop: "ultimo preco negociado; executa a mercado; sem garantia de preco"
+  aprovacao: "ao atingir a meta, a conta passa e as posicoes sao fechadas automaticamente"
+  backtest_stop_e_alvo_no_mesmo_candle: "assumir stop"
+  sinal_executa_em: "candle seguinte ao do sinal"
+
+financiada:
+  saque_minimo_bruto: 100
+  pedidos_por_dia: 1
+  split: 0.8                 # padrao 80/20; o 90/10 e adicional pago escolhido so no checkout
+  split_confirmado: false    # confirmar na compra (se levar o adicional, mudar para 0.9)
+  piso_apos_1o_saque: 10000  # permanente
+  lucro_retido_vira_colchao: true
+  exige_conta_zerada: true
+
+sandbox:
+  incluido_na_compra: true
+  validade_dias: 90
+  saldo: 100000
+  limite_contas_vida: 10
+
+risco:                       # definidos no laboratorio (F3) pelo simulador (M5)
+  K: null                    # perdas seguidas que a conta aguenta; R = margem_viva / K
+  guardiao_frac_margem_dia: 0.25   # provisorio
+  d_min_pct: null            # faixa permitida de distancia do stop
+  d_max_pct: null
+  custo_max_em_R: null       # desligado na etapa 1 do laboratorio (Alison, 2026-09-29); testar nas sobreviventes (era 0.10)
+  max_posicoes: null
+  R_min_usd: 1.0             # abaixo disso o robo para (tamanho minimo de ordem); provisorio
+  R_nominal_backtest: 100    # R usado no modo "trades" do motor (o resultado sai em R, nao depende dele)
+  grupos_correlacao:         # posicoes do mesmo grupo contam juntas no risco
+    cripto: [BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT, BNBUSDT, DOGEUSDT]
+    indices_eua: [USATECHIDXUSD, USA500IDXUSD, "xyz:XYZ100", "xyz:SP500"]
+  risco_max_grupo_em_R: 1.0  # teto de risco somado por grupo, em R; provisorio
+
+operacao:                    # regras do projeto (nao da mesa)
+  indices_so_pregao_regular: true   # decisao do Alison (2026-09-28): indices so no pregao, zerando antes do fechamento
+  pregao_inicio: "09:30"
+  pregao_fim: "16:00"
+  pregao_fim_antecipado: "13:00"   # vespera do 4 de julho, dia seguinte a Acao de Gracas, vespera de Natal
+  fuso_pregao: "America/New_York"  # feriados da NYSE: sem pregao (src/calendario.py)
+
+dados:
+  fuso_armazenamento: "UTC"
+  divisao:                   # gravada em 2026-09-28 (F1), antes de abrir qualquer dado; datas inclusivas, em UTC
+    desenvolvimento_ate: "2023-11-30"
+    validacao_ate: "2025-04-30"
+    cofre_desde: "2025-05-01"
+    cofre_ate: "2026-08-31"  # depois disso: forward (teste em papel), tambem trancado para pesquisa
+  cofre_aberto_para: []      # hipoteses que ja abriram o cofre (uma vez cada)
+  fim_download: "2026-08"    # ultimo mes completo baixado na F1
+  mercados:
+    binance: [BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT, BNBUSDT, DOGEUSDT]   # 1m do ultimo negocio
+    binance_mark: [BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT, BNBUSDT, DOGEUSDT]   # 1m do mark
+    dukascopy: [USATECHIDXUSD, USA500IDXUSD]   # proxies do Nasdaq-100 (XYZ100) e do S&P 500, lado BID
+    dukascopy_macro: [XAUUSD, XAGUSD, BRENTCMDUSD, EURUSD, USDJPY]   # proxies de GOLD, SILVER, BRENTOIL, EUR e JPY (H10)
+    hyperliquid: ["xyz:XYZ100", "xyz:SP500"]   # venue real dos indices, coletado daqui em diante
+  dukascopy_inicio: "2012-01"
+  indices_inicio_pesquisa: "2015-01-01"   # 2012-2014 com falhas no dado (E011); decisao do Alison em 2026-09-29
+  dukascopy_fator_preco: 1000      # preco bruto / 1000 = indice (conferido em 2020-06-02)
+  dukascopy_fator_por_mercado: {EURUSD: 100000}   # excecoes (conferido em 2019-03-04: EURUSD 1,134; ouro, prata, Brent e USDJPY com 1000)
+  macro_inicio_download: "2015-01"   # H10: so o periodo usado na pesquisa
+
+orcamento:
+  contas_por_mes_max: 1
+  gasto_ate_agora_usd: 0
